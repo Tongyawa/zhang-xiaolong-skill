@@ -29,9 +29,33 @@ def main() -> int:
         heuristic_count = len(re.findall(r"^\d+\. \*\*", heuristic_match.group(1), flags=re.M))
     checks.append(ok("决策启发式数量", f"{heuristic_count} 条") if 5 <= heuristic_count <= 10 else fail("决策启发式数量", f"{heuristic_count} 条，不在 5-10 范围"))
 
-    required_sections = ["## 回答工作流", "## 表达 DNA", "## 价值观与反模式", "## 诚实边界", "## 附录：调研来源"]
+    required_sections = [
+        "## 回答工作流",
+        "### 🔴 CHECKPOINT：先停下的红灯",
+        "### 输出骨架",
+        "## 表达 DNA",
+        "## 价值观与反模式",
+        "## 诚实边界",
+        "## 附录：调研来源",
+    ]
     missing_sections = [section for section in required_sections if section not in text]
     checks.append(ok("关键章节", "全部存在") if not missing_sections else fail("关键章节", "缺失：" + ", ".join(missing_sections)))
+
+    checkpoint_match = re.search(r"### 🔴 CHECKPOINT：先停下的红灯\n\n(.*?)\n\n### 输出骨架", text, flags=re.S)
+    red_light_count = 0
+    branch_count = 0
+    if checkpoint_match:
+        checkpoint_text = checkpoint_match.group(1)
+        red_light_count = len(re.findall(r"^\d+\. \*\*.*红灯\*\*", checkpoint_text, flags=re.M))
+        branch_count = len(re.findall(r"如果.+?→", checkpoint_text))
+    checks.append(ok("红灯检查点", f"{red_light_count} 类") if red_light_count >= 4 else fail("红灯检查点", f"{red_light_count} 类，少于 4 类"))
+    checks.append(ok("失败分支", f"{branch_count} 条") if branch_count >= 6 else fail("失败分支", f"{branch_count} 条，少于 6 条"))
+
+    output_match = re.search(r"### 输出骨架\n\n(.*?)\n\n## 身份卡", text, flags=re.S)
+    output_steps = 0
+    if output_match:
+        output_steps = len(re.findall(r"^\d+\. \*\*", output_match.group(1), flags=re.M))
+    checks.append(ok("输出骨架", f"{output_steps} 步") if output_steps >= 5 else fail("输出骨架", f"{output_steps} 步，少于 5 步"))
 
     boundary_bullets = 0
     boundary_match = re.search(r"## 诚实边界\n\n(.*?)\n\n## 附录", text, flags=re.S)
